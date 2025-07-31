@@ -88,3 +88,74 @@ for name, model in models.items():
     })
 
 results_df = pd.DataFrame(results)
+
+# 7. Accuracy Bar Chart
+plt.figure(figsize=(10, 6))
+sns.barplot(data=results_df, x="Accuracy", y="Model", palette="viridis")
+plt.title("Model Accuracy Comparison")
+plt.show()
+
+# 8. Box Plot for Stability
+metrics_df = results_df[["Model", "Accuracy", "Precision", "Recall", "F1-Score"]].set_index("Model")
+plt.figure(figsize=(12, 6))
+sns.boxplot(data=metrics_df.T)
+plt.title("Model Stability - Box Plot")
+plt.xlabel("Model")
+plt.ylabel("Score")
+plt.show()
+
+# 9. ROC Curve (Class 2 = Diabetes)
+plt.figure(figsize=(10, 6))
+for res in results:
+    if res["y_score"] is not None:
+        fpr, tpr, _ = roc_curve(y_test == 2, res["y_score"][:, 2])
+        roc_auc = auc(fpr, tpr)
+        plt.plot(fpr, tpr, label=f'{res["Model"]} (AUC = {roc_auc:.2f})')
+
+plt.plot([0, 1], [0, 1], linestyle='--', color='gray')
+plt.title("ROC Curve (Class 2 = Diabetes)")
+plt.xlabel("False Positive Rate")
+plt.ylabel("True Positive Rate")
+plt.legend()
+plt.show()
+
+# 10. Precision-Recall Curve (Class 2 = Diabetes)
+plt.figure(figsize=(10, 6))
+for res in results:
+    if res["y_score"] is not None:
+        precision, recall, _ = precision_recall_curve(y_test == 2, res["y_score"][:, 2])
+        plt.plot(recall, precision, label=res["Model"])
+
+plt.title("Precision-Recall Curve (Class 2 = Diabetes)")
+plt.xlabel("Recall")
+plt.ylabel("Precision")
+plt.legend()
+plt.show()
+
+# 11. Confusion Matrices
+fig, axes = plt.subplots(3, 3, figsize=(16, 12))
+axes = axes.flatten()
+for i, res in enumerate(results[:9]):
+    cm = confusion_matrix(y_test, res["y_pred"])
+    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', ax=axes[i])
+    axes[i].set_title(res["Model"])
+    axes[i].set_xlabel("Predicted")
+    axes[i].set_ylabel("Actual")
+
+plt.tight_layout()
+plt.suptitle("Confusion Matrices", fontsize=16, y=1.02)
+plt.show()
+
+# 12. Execution Time Chart
+plt.figure(figsize=(10, 6))
+sns.barplot(data=results_df, x="Time", y="Model", palette="mako")
+plt.title("Execution Time per Model")
+plt.xlabel("Time (seconds)")
+plt.ylabel("Model")
+plt.show()
+
+# 13. Correlation Heatmap (on original unscaled dataset)
+plt.figure(figsize=(14, 10))
+sns.heatmap(df.drop(columns=["Diabetes_012"]).corr(), cmap="coolwarm", annot=False)
+plt.title("Feature Correlation Heatmap")
+plt.show()
