@@ -1,0 +1,90 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+import time
+
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import (
+    accuracy_score, precision_score, recall_score, f1_score,
+    confusion_matrix, roc_curve, auc, precision_recall_curve,
+    classification_report
+)
+
+from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.naive_bayes import GaussianNB
+from sklearn.neighbors import KNeighborsClassifier
+from xgboost import XGBClassifier
+
+from imblearn.over_sampling import SMOTE
+from collections import Counter
+
+# Load dataset
+df = pd.read_csv("dataset2.csv")
+
+# 1. Separate features and target
+X = df.drop(columns=["Diabetes_012"])
+y = df["Diabetes_012"]
+
+# 2. Train-test split (with stratify)
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, stratify=y, random_state=42
+)
+
+# 3. Apply SMOTE on training data only
+smote = SMOTE(random_state=42)
+X_train_resampled, y_train_resampled = smote.fit_resample(X_train, y_train)
+
+print("Class distribution BEFORE SMOTE:", Counter(y_train))
+print("Class distribution AFTER SMOTE:", Counter(y_train_resampled))
+
+# 4. Feature scaling
+scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train_resampled)
+X_test_scaled = scaler.transform(X_test)
+
+# 5. Model definitions
+models = {
+    "Logistic Regression": LogisticRegression(max_iter=1000),
+    "Random Forest": RandomForestClassifier(),
+    "Decision Tree": DecisionTreeClassifier(),
+    "Naive Bayes": GaussianNB(),
+    "KNN": KNeighborsClassifier(),
+    "Gradient Boosting": GradientBoostingClassifier(),
+    "XGBoost": XGBClassifier(use_label_encoder=False, eval_metric='mlogloss')
+}
+
+# 6. Train, evaluate and collect metrics
+results = []
+
+for name, model in models.items():
+    start = time.time()
+    model.fit(X_train_scaled, y_train_resampled)
+    y_pred = model.predict(X_test_scaled)
+    y_score = model.predict_proba(X_test_scaled) if hasattr(model, "predict_proba") else None
+    end = time.time()
+
+    print(f"\n ----- {name} -----")
+    print("Accuracy:", accuracy_score(y_test, y_pred))
+    print("Weighted Precision:", precision_score(y_test, y_pred, average='weighted'))
+    print("Weighted Recall:", recall_score(y_test, y_pred, average='weighted'))
+    print("Weighted F1 Score:", f1_score(y_test, y_pred, average='weighted'))
+
+    # Per-Class Report
+    print("\nPer-Class Classification Report:")
+    print(classification_report(y_test, y_pred, digits=4))
+
+    results.append({
+        "Model": name,
+        "Accuracy": accuracy_score(y_test, y_pred),
+        "Precision": precision_score(y_test, y_pred, average='weighted'),
+        "Recall": recall_score(y_test, y_pred, average='weighted'),
+        "F1-Score": f1_score(y_test, y_pred, average='weighted'),
+        "Time": end - start,
+        "y_pred": y_pred,
+        "y_score": y_score
+    })
+
+results_df = pd.DataFrame(results)
