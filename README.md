@@ -12,8 +12,8 @@
 
 ## Methodology
 
-1. **Data Acquisition**  
-   Publicly available diabetes dataset with features like BMI, age, cholesterol, physical health, etc.
+1. **Data Gathering**  
+   Publicly available diabetes datasets (from Kaggle) with features like BMI, age, cholesterol, physical health, etc.
 
 2. **Preprocessing**  
    - Missing value imputation  
